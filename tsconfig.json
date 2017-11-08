@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "strictNullChecks": true,
+    "lib": ["es2015", "es2017", "dom"],
+    "target": "es5"
+  },
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}
