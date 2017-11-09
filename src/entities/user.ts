@@ -1,5 +1,6 @@
+import Group from './group'
 import { UDID_LENGTH } from './../helpers/udid'
-import { BaseEntity, Entity, PrimaryColumn, Column } from 'typeorm'
+import { BaseEntity, Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm'
 
 @Entity('User')
 export default class User extends BaseEntity {
@@ -20,4 +21,14 @@ export default class User extends BaseEntity {
     nullable: true
   })
   email: string
+
+  @Column({
+    type: 'varchar',
+    nullable: false
+  })
+  password: string
+
+  @ManyToOne(type => Group)
+  @JoinColumn({ name: 'group' })
+  group: Group
 }
