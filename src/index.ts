@@ -1,5 +1,6 @@
+import * as jsonapi from './../examples/jsonapi/jsonapi'
 import { generateUDID } from './helpers/udid'
-import { createConnection, BaseEntity, Connection } from 'typeorm'
+import { createConnection, BaseEntity, Connection, getRepository } from 'typeorm'
 import User from './entities/user'
 import Group from './entities/group'
 import * as restify from 'restify'
@@ -30,23 +31,41 @@ server.get('/', (req, res, next) => {
 })
 
 server.get('/entities/:class', async (req, res, next) => {
+  const response: jsonapi.Document = {}
+  let responseCode: number
   try {
-    const entityClass = require('./entities/' + req.params.class).default as typeof BaseEntity
+    const entityClass: string = req.params.class
     const metadata = connection.getMetadata(entityClass)
-    const response: any[] = []
-    for (let entity of await entityClass.find()) {
-      const e: any = {}
-      e.id = entity[metadata.primaryColumns[0].databaseName]
-      e.attributes = {}
-      for (let column of metadata.ownColumns) {
-        if (!column.isPrimary) e.attributes[column.databaseName] = entity[column.databaseName]
+    response.data = []
+    for (let entity of await getRepository(entityClass).find()) {
+      const resource: jsonapi.ResourceObject = {
+        type: entityClass
       }
-      response.push(e)
+      resource.id = entity[metadata.primaryColumns[0].databaseName]
+      resource.attributes = {}
+      for (let column of metadata.ownColumns) {
+        if (!column.isPrimary && !column.relationMetadata) resource.attributes[column.databaseName] = entity[column.databaseName]
+        else if (column.relationMetadata) {
+          if (!resource.relationships) resource.relationships = {}
+          resource.relationships[column.databaseName] = {
+            data: {
+              id: entity[column.databaseName],
+              type: column.relationMetadata.propertyPath
+            }
+          }
+        }
+      }
+      (response.data as jsonapi.ResourceObject[]).push(resource)
     }
-    res.send(200, response)
-  } catch (error) {
-    console.log(error)
-    res.send(400, 'nope')
+    responseCode = 200
+  } catch (err) {
+    console.log(err)
+    response.errors = [{
+      id: 'myid'
+    }]
+    responseCode = 404
+  } finally {
+    res.send(responseCode!, response)
   }
   next()
 })
@@ -69,11 +88,14 @@ server.post('/entities/:class', async (req, res, next) => {
     user.username = 'gogo'
     user.password = 'zzzzz'
     user.id = generateUDID()
-    user = await user.save()
 
-    const group = new Group()
+    let group = new Group()
+    group.id = generateUDID()
     group.name = 'ze group'
     user.group = group
+
+    group = await group.save()
+    user = await user.save()
 
     const attributes: any = Object.assign({}, user)
     delete attributes.id

@@ -28,7 +28,14 @@ export default class User extends BaseEntity {
   })
   password: string
 
-  @ManyToOne(type => Group)
-  @JoinColumn({ name: 'group' })
+  @ManyToOne(type => Group, {
+    eager: false
+  })
+  @JoinColumn()
   group: Group
+
+  @Column({
+    type: 'varchar'
+  })
+  groupId: string
 }
